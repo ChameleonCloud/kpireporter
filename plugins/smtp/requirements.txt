@@ -1,1 +1,2 @@
 premailer
+lxml<6  # 6.x ships no cp38 wheel; pin avoids a from-source build on slim images
