@@ -39,6 +39,8 @@ def test_render_with_tzinfo_timezone(jinja_env):
         query="select 1",
         kind="bar",
     )
-    output = view.render(make_render_env(jinja_env, view, FakeOutputDriver(report), "html"))
+    output = view.render(
+        make_render_env(jinja_env, view, FakeOutputDriver(report), "html")
+    )
 
     assert isinstance(output, str)
