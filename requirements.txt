@@ -1,6 +1,6 @@
 authlib
 jinja2
-pandas
+pandas<2  # 2.0 removed DataFrame.append (used by the prometheus ds)
 python-slugify
 pyyaml
 stevedore
