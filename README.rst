@@ -4,8 +4,13 @@
 KPI Reporter
 =============
 
-.. image:: https://img.shields.io/github/workflow/status/kpireporter/kpireporter/Build%20Docker%20image
-   :target: https://github.com/kpireporter/kpireporter/actions?query=workflow%3A%22Build+Docker+image%22
+.. image:: https://img.shields.io/github/check-runs/ChameleonCloud/kpireporter/main?nameFilter=unittest&label=unit%20tests
+   :alt: Unit tests
+   :target: https://github.com/ChameleonCloud/kpireporter/actions/workflows/release.yml
+
+.. image:: https://img.shields.io/github/check-runs/ChameleonCloud/kpireporter/main?nameFilter=docker&label=docker%20build
+   :alt: Docker build
+   :target: https://github.com/ChameleonCloud/kpireporter/actions/workflows/release.yml
 
 KPI Reporter is a **dev-friendly**, **on-premises** tool for for crafting automated
 reports on what matters to you.
