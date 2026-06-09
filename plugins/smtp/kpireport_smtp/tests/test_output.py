@@ -26,3 +26,25 @@ def test_report_output(report: "Report", content: "Content", mocker: "mock"):
     smtp.render_output(content, [])
 
     fake_smtp.send_message.assert_called_once()
+    # Default (no creds, no TLS) stays a plain handoff.
+    fake_smtp.starttls.assert_not_called()
+    fake_smtp.login.assert_not_called()
+
+
+def test_report_output_smtp_auth(report: "Report", content: "Content", mocker: "mock"):
+    fake_smtp = mocker.patch("kpireport_smtp.output.smtplib.SMTP")()
+    fake_smtp.__enter__.return_value = fake_smtp
+
+    smtp = SMTPOutputDriver(
+        report,
+        email_from="from@example.com",
+        email_to="to@example.com",
+        smtp_user="emailapikey",
+        smtp_password="secret-token",
+        use_tls=True,
+    )
+    smtp.render_output(content, [])
+
+    fake_smtp.starttls.assert_called_once()
+    fake_smtp.login.assert_called_once_with("emailapikey", "secret-token")
+    fake_smtp.send_message.assert_called_once()

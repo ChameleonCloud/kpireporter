@@ -1,4 +1,5 @@
 import smtplib
+import ssl
 from datetime import datetime
 from email.headerregistry import Address
 from email.message import EmailMessage
@@ -17,6 +18,11 @@ class SMTPOutputDriver(OutputDriver):
         smtp_host (str): SMTP server to relay mail through. Defaults to
             "localhost".
         smtp_port (int): SMTP port to use. Defaults to 25.
+        smtp_user (str): Username for SMTP authentication. If unset, no
+            authentication is attempted (backwards-compatible default).
+        smtp_password (str): Password for SMTP authentication.
+        use_tls (bool): Upgrade the connection with STARTTLS before sending.
+            Defaults to False.
         image_strategy (str): Strategy to use for including images in the mail
             contents. Two options are available:
 
@@ -51,6 +57,9 @@ class SMTPOutputDriver(OutputDriver):
         email_to=None,
         smtp_host="localhost",
         smtp_port=25,
+        smtp_user=None,
+        smtp_password=None,
+        use_tls=False,
         image_strategy="embed",
         image_remote_base_url=None,
     ):
@@ -63,6 +72,9 @@ class SMTPOutputDriver(OutputDriver):
         self.email_to = [self._parse_address(to) for to in email_to]
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
+        self.smtp_user = smtp_user
+        self.smtp_password = smtp_password
+        self.use_tls = use_tls
         self.image_strategy = image_strategy
         if image_remote_base_url:
             self.image_remote_base_url = image_remote_base_url.format(
@@ -106,6 +118,13 @@ class SMTPOutputDriver(OutputDriver):
                     blob.content.getvalue(), maintype, subtype, cid=blob.id
                 )
 
-        # Send the message via local SMTP server.
+        # Send the message, optionally over an authenticated TLS connection.
         with smtplib.SMTP(self.smtp_host, port=self.smtp_port) as s:
+            if self.use_tls:
+                # if context=None, server cert validation is skipped
+                # https://github.com/python/cpython/issues/91826
+                # https://docs.python.org/3/library/ssl.html#ssl-security
+                s.starttls(context=ssl.create_default_context())
+            if self.smtp_user:
+                s.login(self.smtp_user, self.smtp_password)
             s.send_message(msg)
