@@ -1,3 +1,4 @@
+import logging
 import smtplib
 import ssl
 from datetime import datetime
@@ -5,8 +6,10 @@ from email.headerregistry import Address
 from email.message import EmailMessage
 
 from jinja2.utils import markupsafe
-from kpireport.output import OutputDriver
+from kpireport.output import OutputDriver, OutputDriverError
 from premailer import transform
+
+LOG = logging.getLogger(__name__)
 
 
 class SMTPOutputDriver(OutputDriver):
@@ -119,6 +122,13 @@ class SMTPOutputDriver(OutputDriver):
                 )
 
         # Send the message, optionally over an authenticated TLS connection.
+        recipients = [str(addr) for addr in self.email_to]
+        LOG.info(
+            "Sending report to %s via %s:%s",
+            ", ".join(recipients),
+            self.smtp_host,
+            self.smtp_port,
+        )
         with smtplib.SMTP(self.smtp_host, port=self.smtp_port) as s:
             if self.use_tls:
                 # if context=None, server cert validation is skipped
@@ -127,4 +137,23 @@ class SMTPOutputDriver(OutputDriver):
                 s.starttls(context=ssl.create_default_context())
             if self.smtp_user:
                 s.login(self.smtp_user, self.smtp_password)
-            s.send_message(msg)
+            refused = s.send_message(msg)
+
+        # send_message will return normally if the mail is accepted for at least
+        # one recipient.  It returns a dictionary, with one entry for each
+        # recipient that was refused.  Each entry contains a tuple of the SMTP
+        # error code and the accompanying error message sent by the server.
+        if refused:
+            for addr, (code, resp) in refused.items():
+                LOG.warning("Recipient %s refused: %s %s", addr, code, resp)
+            message = str.format(
+                "{} of {} recipients refused: {}",
+                len(refused),
+                len(recipients),
+                ",".join(refused),
+            )
+            raise OutputDriverError(message)
+        else:
+            LOG.info(
+                "All %d recipient(s) accepted by %s", len(recipients), self.smtp_host
+            )
