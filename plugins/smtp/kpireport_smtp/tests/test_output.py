@@ -1,6 +1,8 @@
 from email.message import EmailMessage
 from unittest import mock
 
+import pytest
+from kpireport.output import OutputDriverError
 from kpireport.report import Content, Report
 from kpireport_smtp import SMTPOutputDriver
 
@@ -34,6 +36,7 @@ def test_report_output(report: "Report", content: "Content", mocker: "mock"):
 def test_report_output_smtp_auth(report: "Report", content: "Content", mocker: "mock"):
     fake_smtp = mocker.patch("kpireport_smtp.output.smtplib.SMTP")()
     fake_smtp.__enter__.return_value = fake_smtp
+    fake_smtp.send_message.return_value = {}
 
     smtp = SMTPOutputDriver(
         report,
@@ -48,3 +51,18 @@ def test_report_output_smtp_auth(report: "Report", content: "Content", mocker: "
     fake_smtp.starttls.assert_called_once()
     fake_smtp.login.assert_called_once_with("emailapikey", "secret-token")
     fake_smtp.send_message.assert_called_once()
+
+
+def test_report_output_recipients_refused(
+    report: "Report", content: "Content", mocker: "mock"
+):
+    fake_smtp = mocker.patch("kpireport_smtp.output.smtplib.SMTP")()
+    fake_smtp.__enter__.return_value = fake_smtp
+    fake_smtp.send_message.return_value = {"bad@example.com": (550, b"No such user")}
+
+    smtp = SMTPOutputDriver(
+        report, email_from="from@example.com", email_to="to@example.com"
+    )
+
+    with pytest.raises(OutputDriverError):
+        smtp.render_output(content, [])
